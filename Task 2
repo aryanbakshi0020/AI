@@ -1,0 +1,27 @@
+pip install transformers
+pip install torchaudio
+
+import torch
+import torchaudio
+from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+
+
+processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+
+
+waveform, sample_rate = torchaudio.load("path_to_your_audio.wav")
+
+
+if sample_rate != 16000:
+    resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
+    waveform = resampler(waveform)
+
+
+inputs = processor(waveform[0], sampling_rate=16000, return_tensors="pt", padding=True)
+with torch.no_grad():
+    logits = model(**inputs).logits
+predicted_ids = torch.argmax(logits, dim=-1)
+transcription = processor.batch_decode(predicted_ids)[0]
+
+print("Transcription:", transcription)
